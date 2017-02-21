@@ -2,7 +2,7 @@ package tree
 
 import (
 	"fmt"
-);
+)
 
 // define tree node element
 type TreeNode struct {
