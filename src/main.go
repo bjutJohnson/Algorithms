@@ -1,9 +1,11 @@
 package main
 
 //import "tree"
-import "recursion"
+//import "recursion"
+import "probabilistic"
 
 func main() {
 	//tree.Test1()
-	recursion.Test()
+	//recursion.Test()
+	probabilistic.Test_ComputePi()
 }
