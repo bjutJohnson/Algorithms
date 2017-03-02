@@ -11,22 +11,15 @@ func ComputePi(num int) float64{
 	hit := 0
 
 	for i := 0 ; i < num; i++{
-		//s1 := rand.NewSource(time.Now().Unix())
-		//r1 := rand.New(s1)
 
 		x := rand.Float64()
-
-		//s2 := rand.NewSource(time.Now().Unix())
-		//r2 := rand.New(s2)
 		y := rand.Float64()
-
-		//fmt.Println(x, y)
 
 		if x * x + y * y <= 1.0{
 			hit++
 		}
 	}
-	fmt.Println("hit = ", hit)
+	//fmt.Println("hit = ", hit)
 	return 4 * float64(hit) / float64(num)
 }
 
