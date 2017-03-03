@@ -281,3 +281,9 @@ func (pBst *BSTree) Delete(deleteKey int) *TreeNode{
 
 	return replace
 }
+
+// print bstree perfectly
+func (bst BSTree) PrintBstree(){
+	// compute hierachy of the tree
+	
+}
