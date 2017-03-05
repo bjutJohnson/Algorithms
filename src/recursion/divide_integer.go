@@ -11,6 +11,7 @@ func DivideInteger(n, m int) int {
 		return 0
 	}
 
+	// 当m为1时，其划分必然全为1
 	if m == 1 {
 		return 1
 	}
@@ -27,7 +28,6 @@ func DivideInteger(n, m int) int {
 		return DivideInteger(n, m - 1) + DivideInteger(n - m, m)
 	}
 
-	// 当前面的条件都不成立时，程序能执行到这里，必然是m为1的时候，显然，对于任意的n，必然只有一种分法，即都为1
 	return 0
 }
 
