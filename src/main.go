@@ -1,8 +1,8 @@
 package main
 
 //import "tree"
-import "recursion"
-//import "probabilistic"
+//import "recursion"
+import "probabilistic"
 
 func main() {
 	//tree.Test1()
@@ -10,6 +10,7 @@ func main() {
 	//probabilistic.Test_ComputePi()
 
 	//recursion.TestPermutaion()
-	recursion.TestDivideInteger()
+	//recursion.TestDivideInteger()
 	//recursion.TestHannoi()
-}	
+	probabilistic.Test()
+}
