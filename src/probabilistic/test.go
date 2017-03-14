@@ -5,7 +5,7 @@ import (
 )
 
 func Test() {
-	treasure := []int{0, 0, 0, 1, 0, 0, 1, 0, 0, 1}
+	treasure := []int{0, 1, 0, 1, 0, 0, 1, 1, 0, 1}
 	lvs := make([]int, 0)
 	mcs := make([]int, 0)
 
