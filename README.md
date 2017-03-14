@@ -16,6 +16,10 @@ src
 		--test_fib.go  		  测试斐波那契函数  
 		--hannoi.go 		  汉诺塔  
 		--divide_integer.go   整数划分  
-		--permutation.go      求集合的排列
+		--permutation.go      求集合的排列  
+
+	--probabilistic  
+		--lasvegas.go  		  拉斯维加斯算法  
+		--montercarlo.go 	  蒙特卡洛算法  
 
 	--main.go 				  主函数入口   
