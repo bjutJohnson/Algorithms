@@ -2,7 +2,10 @@ package main
 
 //import "tree"
 //import "recursion"
-import "probabilistic"
+//import "probabilistic"
+import (
+	"graph"
+)
 
 func main() {
 	//tree.Test1()
@@ -12,5 +15,5 @@ func main() {
 	//recursion.TestPermutaion()
 	//recursion.TestDivideInteger()
 	//recursion.TestHannoi()
-	probabilistic.Test()
+	graph.Test_BFS()
 }
