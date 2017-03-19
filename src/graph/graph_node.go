@@ -1,5 +1,10 @@
 package graph
 
+import (
+	"errors"
+	"johnson_utility"
+)
+
 // 定义三种颜色
 const (
 	CON_WHITE = 0
@@ -13,7 +18,7 @@ type GraphNode struct {
 	edges []int // 标识邻接边的编号
 	color int8  // 标识是否访问
 
-	feature map[string]interface{} // 定义图节点本身的属性，以key-value的形势提供
+	feature map[string]interface{} // 定义图节点本身的属性，以key-value的形式提供，用户负责转换，另一种方案是使用reflect
 }
 
 // 创建一个节点
@@ -57,4 +62,49 @@ func (pGNode *GraphNode) SetColor(iColor int8) {
 	pGNode.color = iColor
 }
 
-//
+// 增加属性, key必须唯一
+func (pGNode *GraphNode) AddFeature(key string, value interface{}) error {
+	if pGNode.feature == nil {
+		pGNode.feature = make(map[string]interface{})
+	}
+
+	if _, ok := pGNode.feature[key]; !ok {
+		pGNode.feature[key] = value
+	} else {
+		str := johnson_utility.ConcateString("属性", key, "已存在，没有必要添加第二次")
+		return errors.New(str)
+	}
+
+	return nil
+}
+
+// 设置属性的值，要求属性必须存在
+func (pGNode *GraphNode) SetFeature(key string, value interface{}) error {
+	if pGNode.feature == nil {
+		return errors.New("属性对值不存在")
+	}
+
+	if _, ok := pGNode.feature[key]; !ok {
+		str := johnson_utility.ConcateString("属性", key, "不存在，请先添加属性，然后再进行设置")
+		return errors.New(str)
+	} else {
+		pGNode.feature[key] = value
+	}
+
+	return nil
+}
+
+// 获取属性值
+func (gnode GraphNode) GetFeature(key string) (interface{}, error) {
+	if gnode.feature == nil {
+		return nil, errors.New("属性对值不存在")
+	}
+
+	if _, ok := gnode.feature[key]; !ok {
+		str := johnson_utility.ConcateString("属性", key, "不存在，请先添加属性，然后再进行设置")
+		return nil, errors.New(str)
+	}
+
+	return gnode.feature[key], nil
+
+}

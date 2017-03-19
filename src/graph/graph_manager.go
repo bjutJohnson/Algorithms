@@ -2,6 +2,7 @@ package graph
 
 import (
 	"errors"
+	"fmt"
 	"johnson_utility"
 	"log"
 	"queue"
@@ -23,13 +24,16 @@ type GraphManager struct {
 	isDirection bool // 有向图还是无向图，必须初始时给定
 
 	lockChan chan bool // 控制对管理对象的操作，一个时刻只能有一个gorouter对其进行修改
+
+	logicTime int // 用于控制深度遍历的时刻的逻辑时钟，只表示先后关系，如t0=0, t1=1表示t1是紧邻t0的下一个时刻
 }
 
 // 创建图的管理者
 func NewGraphManager(direction bool) *GraphManager {
-	return &GraphManager{make(map[int]*GraphNode, 0), make(map[int]*GraphEdge), 0, 0, direction, make(chan bool)}
+	return &GraphManager{make(map[int]*GraphNode, 0), make(map[int]*GraphEdge), 0, 0, direction, make(chan bool), 0}
 }
 
+// 打印所有的边
 func (gm GraphManager) PrintEdges() {
 	gm.applyChan()
 	defer gm.releaseChan()
@@ -39,6 +43,22 @@ func (gm GraphManager) PrintEdges() {
 		log.Println(*v)
 	}
 	log.Println("<=====end :id2Edge=====>")
+}
+
+// 打印图节点
+func (gm GraphManager) PrintNode() {
+	fmt.Println("<====starting to print graph node======>")
+
+	for _, v := range gm.id2Node {
+		discovery, _ := v.GetFeature("discovery")
+		finish, _ := v.GetFeature("finish")
+
+		fmt.Print("id: ")
+		fmt.Print(v.GetId())
+		fmt.Print(", discovery time: ", discovery)
+		fmt.Println(", finishing time: ", finish)
+	}
+	fmt.Println("<====end of printing graph node =======>")
 }
 
 // 增加一个图节点
@@ -211,6 +231,51 @@ func (gm GraphManager) BFS(sourceIdx int) ([]*GraphNode, error) {
 }
 
 // 深度遍历
-func (GraphManager GraphManager) DFS() {
+func (gm *GraphManager) DFS() {
+	gm.applyChan()
+	defer gm.releaseChan()
 
+	// 给所有的节点添加属性
+	for _, v := range gm.id2Node {
+		v.AddFeature("parent", nil)
+		v.AddFeature("discovery", -1)
+		v.AddFeature("finish", -1)
+	}
+
+	for _, v := range gm.id2Node {
+		if v.GetColor() == CON_WHITE {
+			gm.dfs_Visit(v)
+		}
+	}
+}
+
+// 深度遍历具体细节
+func (gm *GraphManager) dfs_Visit(pgNode *GraphNode) error {
+	gm.logicTime = gm.logicTime + 1
+	pgNode.SetFeature("discovery", gm.logicTime)
+	pgNode.SetColor(CON_GRAY)
+
+	// 获取所有的邻接节点
+	allAdjacent, err := gm.getAllAdjacentNodes(pgNode.GetId())
+	if err != nil {
+		str := johnson_utility.ConcateString("获取编号为", strconv.FormatInt(int64(pgNode.GetId()), 10), "的邻接节点时出错")
+		return errors.New(str)
+	}
+
+	for _, v := range allAdjacent {
+		node := gm.getNodeById(v)
+		if node != nil {
+			if node.GetColor() == CON_WHITE {
+				node.SetFeature("parent", pgNode)
+				gm.dfs_Visit(node)
+			}
+		}
+	}
+
+	pgNode.SetColor(CON_BLACK)
+
+	gm.logicTime = gm.logicTime + 1
+	pgNode.SetFeature("finish", gm.logicTime)
+
+	return nil
 }

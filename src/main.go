@@ -15,5 +15,5 @@ func main() {
 	//recursion.TestPermutaion()
 	//recursion.TestDivideInteger()
 	//recursion.TestHannoi()
-	graph.Test_BFS()
+	graph.Test_DFS()
 }
