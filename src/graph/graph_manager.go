@@ -7,6 +7,7 @@ import (
 	"log"
 	"queue"
 	"strconv"
+	"sync"
 )
 
 const (
@@ -23,14 +24,14 @@ type GraphManager struct {
 
 	isDirection bool // 有向图还是无向图，必须初始时给定
 
-	lockChan chan bool // 控制对管理对象的操作，一个时刻只能有一个gorouter对其进行修改
+	mutex *sync.Mutex // 控制对管理对象的操作，一个时刻只能有一个gorouter对其进行修改
 
 	logicTime int // 用于控制深度遍历的时刻的逻辑时钟，只表示先后关系，如t0=0, t1=1表示t1是紧邻t0的下一个时刻
 }
 
 // 创建图的管理者
 func NewGraphManager(direction bool) *GraphManager {
-	return &GraphManager{make(map[int]*GraphNode, 0), make(map[int]*GraphEdge), 0, 0, direction, make(chan bool), 0}
+	return &GraphManager{make(map[int]*GraphNode, 0), make(map[int]*GraphEdge), 0, 0, direction, new(sync.Mutex), 0}
 }
 
 // 打印所有的边
@@ -74,14 +75,12 @@ func (pGManager *GraphManager) AddNode() {
 
 // 申请管道
 func (pGManager *GraphManager) applyChan() {
-	go func() {
-		pGManager.lockChan <- true
-	}()
+	pGManager.mutex.Lock()
 }
 
 // 清空管道
 func (pGManager *GraphManager) releaseChan() {
-	<-pGManager.lockChan
+	pGManager.mutex.Unlock()
 }
 
 // 增加一条边， 当节点不存在时，返回错误
@@ -123,9 +122,6 @@ func (gm GraphManager) IsDirection() bool {
 
 // 获取标识符为idx的节点
 func (gm GraphManager) getNodeById(idx int) *GraphNode {
-	gm.applyChan()
-	defer gm.releaseChan()
-
 	if v, ok := gm.id2Node[idx]; ok {
 		return v
 	} else {
@@ -135,9 +131,6 @@ func (gm GraphManager) getNodeById(idx int) *GraphNode {
 
 // 获取标识为idx的边
 func (gm GraphManager) getEdgeById(idx int) *GraphEdge {
-	gm.applyChan()
-	defer gm.releaseChan()
-
 	if v, ok := gm.id2Edge[idx]; ok {
 		return v
 	} else {
@@ -147,9 +140,6 @@ func (gm GraphManager) getEdgeById(idx int) *GraphEdge {
 
 // 获取一个节点的所有邻接节点的编号
 func (gm GraphManager) getAllAdjacentNodes(sourceIdx int) ([]int, error) {
-	gm.applyChan()
-	defer gm.releaseChan()
-
 	v := gm.getNodeById(sourceIdx)
 	if v == nil {
 		return nil, errors.New("调用getAllAdjacentNodes时，指定的源节点编号不存在！")
