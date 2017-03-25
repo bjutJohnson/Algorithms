@@ -69,3 +69,29 @@ func Test_Channel() {
 		}
 	}
 }
+
+var c chan bool = make(chan bool)
+
+func func1() {
+	fmt.Println("func1")
+	c <- true
+}
+
+func func2() {
+	fmt.Println("func2")
+	c <- true
+}
+
+func func3() {
+	fmt.Println("func3")
+	c <- true
+}
+
+func Test_func() {
+	go func1()
+	<-c
+	go func2()
+	<-c
+	go func3()
+	<-c
+}
