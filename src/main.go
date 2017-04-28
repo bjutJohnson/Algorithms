@@ -4,7 +4,8 @@ package main
 //import "recursion"
 //import "probabilistic"
 import (
-	"graph"
+	//"graph"
+	"greedy"
 )
 
 func main() {
@@ -15,5 +16,6 @@ func main() {
 	//recursion.TestPermutaion()
 	//recursion.TestDivideInteger()
 	//recursion.TestHannoi()
-	graph.Test_DFS()
+	//graph.Test_DFS()
+	greedy.TestLeastCoinNum()
 }
