@@ -3,6 +3,7 @@ package queue
 import (
 	"errors"
 	"log"
+	"sync"
 )
 
 // 队列管理结构
@@ -13,7 +14,7 @@ type Queue struct {
 	tail    int  // 指示队列尾部元素
 	isEmpty bool // 指示是否时空闲
 
-	lockChan chan bool // 控制访问
+	mutex *sync.Mutex
 }
 
 func (q Queue) PrintQueue() {
@@ -41,21 +42,21 @@ func (q Queue) PrintQueue() {
 
 // 创建队列
 func NewQueue(iSize int) *Queue {
-	return &Queue{make([]*QueueNode, iSize), 0, 0, true, make(chan bool, 1)}
+	return &Queue{make([]*QueueNode, iSize), 0, 0, true, new(sync.Mutex)}
 }
 
 // 加锁及解锁操作
 func (pQ *Queue) lock() {
-	pQ.lockChan <- true
+	pQ.mutex.Lock()
 }
 
 func (pQ *Queue) unlock() {
-	<-pQ.lockChan
+	pQ.mutex.Unlock()
 }
 
 // 向队列中添加对象
 func (pQueue *Queue) Push(pNode *QueueNode) error {
-	go pQueue.lock()
+	pQueue.lock()
 	defer pQueue.unlock()
 
 	if pNode == nil {
@@ -82,7 +83,7 @@ func (pQueue *Queue) Push(pNode *QueueNode) error {
 
 // 队列中元素个数
 func (q Queue) Len() int {
-	go q.lock()
+	q.lock()
 	defer q.unlock()
 
 	if q.isEmpty {
@@ -103,7 +104,7 @@ func (q Queue) Capacity() int {
 
 // 出队列
 func (pQueue *Queue) Pop() (*QueueNode, error) {
-	go pQueue.lock()
+	pQueue.lock()
 	defer pQueue.unlock()
 
 	if pQueue.Len() == 0 {

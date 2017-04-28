@@ -21,6 +21,15 @@ type GraphNode struct {
 	feature map[string]interface{} // 定义图节点本身的属性，以key-value的形式提供，用户负责转换，另一种方案是使用reflect
 }
 
+// 为排序定义
+type GraphNodes4SortByFinish []*GraphNode
+
+func (a GraphNodes4SortByFinish) Len() int      { return len(a) }
+func (a GraphNodes4SortByFinish) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a GraphNodes4SortByFinish) Less(i, j int) bool {
+	return a[i].feature["finish"].(int) < a[j].feature["finish"].(int)
+}
+
 // 创建一个节点
 func NewGraphNode(id int) *GraphNode {
 	return &GraphNode{id, make([]int, 0), CON_WHITE, nil}

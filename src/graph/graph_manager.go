@@ -6,7 +6,9 @@ import (
 	"johnson_utility"
 	"log"
 	"queue"
+	"sort"
 	"strconv"
+	"sync"
 )
 
 const (
@@ -23,14 +25,16 @@ type GraphManager struct {
 
 	isDirection bool // 有向图还是无向图，必须初始时给定
 
-	lockChan chan bool // 控制对管理对象的操作，一个时刻只能有一个gorouter对其进行修改
+	isCirculation bool // 是否存在循环，初始时为false
+
+	mutex *sync.Mutex // 控制对管理对象的操作，一个时刻只能有一个goroutine对其进行修改
 
 	logicTime int // 用于控制深度遍历的时刻的逻辑时钟，只表示先后关系，如t0=0, t1=1表示t1是紧邻t0的下一个时刻
 }
 
 // 创建图的管理者
 func NewGraphManager(direction bool) *GraphManager {
-	return &GraphManager{make(map[int]*GraphNode, 0), make(map[int]*GraphEdge), 0, 0, direction, make(chan bool), 0}
+	return &GraphManager{make(map[int]*GraphNode, 0), make(map[int]*GraphEdge), 0, 0, direction, false, new(sync.Mutex), 0}
 }
 
 // 打印所有的边
@@ -47,6 +51,9 @@ func (gm GraphManager) PrintEdges() {
 
 // 打印图节点
 func (gm GraphManager) PrintNode() {
+	gm.applyChan()
+	defer gm.releaseChan()
+
 	fmt.Println("<====starting to print graph node======>")
 
 	for _, v := range gm.id2Node {
@@ -61,8 +68,8 @@ func (gm GraphManager) PrintNode() {
 	fmt.Println("<====end of printing graph node =======>")
 }
 
-// 增加一个图节点
-func (pGManager *GraphManager) AddNode() {
+// 增加一个图节点, 返回标识唯一节点的编号
+func (pGManager *GraphManager) AddNode() int {
 	pGManager.applyChan()
 	defer pGManager.releaseChan()
 
@@ -70,18 +77,18 @@ func (pGManager *GraphManager) AddNode() {
 	pGManager.id2Node[pGManager.nodeCounter] = newNode
 
 	pGManager.nodeCounter++
+
+	return newNode.GetId()
 }
 
-// 申请管道
+// 加锁
 func (pGManager *GraphManager) applyChan() {
-	go func() {
-		pGManager.lockChan <- true
-	}()
+	pGManager.mutex.Lock()
 }
 
-// 清空管道
+// 释放锁
 func (pGManager *GraphManager) releaseChan() {
-	<-pGManager.lockChan
+	pGManager.mutex.Unlock()
 }
 
 // 增加一条边， 当节点不存在时，返回错误
@@ -123,9 +130,6 @@ func (gm GraphManager) IsDirection() bool {
 
 // 获取标识符为idx的节点
 func (gm GraphManager) getNodeById(idx int) *GraphNode {
-	gm.applyChan()
-	defer gm.releaseChan()
-
 	if v, ok := gm.id2Node[idx]; ok {
 		return v
 	} else {
@@ -135,9 +139,6 @@ func (gm GraphManager) getNodeById(idx int) *GraphNode {
 
 // 获取标识为idx的边
 func (gm GraphManager) getEdgeById(idx int) *GraphEdge {
-	gm.applyChan()
-	defer gm.releaseChan()
-
 	if v, ok := gm.id2Edge[idx]; ok {
 		return v
 	} else {
@@ -147,9 +148,6 @@ func (gm GraphManager) getEdgeById(idx int) *GraphEdge {
 
 // 获取一个节点的所有邻接节点的编号
 func (gm GraphManager) getAllAdjacentNodes(sourceIdx int) ([]int, error) {
-	gm.applyChan()
-	defer gm.releaseChan()
-
 	v := gm.getNodeById(sourceIdx)
 	if v == nil {
 		return nil, errors.New("调用getAllAdjacentNodes时，指定的源节点编号不存在！")
@@ -176,7 +174,7 @@ func (gm GraphManager) getAllAdjacentNodes(sourceIdx int) ([]int, error) {
 }
 
 // 广度遍历
-func (gm GraphManager) BFS(sourceIdx int) ([]*GraphNode, error) {
+func (gm *GraphManager) BFS(sourceIdx int) ([]*GraphNode, error) {
 	gm.applyChan()
 	defer gm.releaseChan()
 
@@ -219,6 +217,8 @@ func (gm GraphManager) BFS(sourceIdx int) ([]*GraphNode, error) {
 			if vertex.GetColor() == CON_WHITE {
 				vertex.SetColor(CON_GRAY)
 				q.Push(queue.NewQueueNode(vIdx))
+			} else {
+				gm.isCirculation = true
 			}
 		}
 
@@ -268,6 +268,11 @@ func (gm *GraphManager) dfs_Visit(pgNode *GraphNode) error {
 			if node.GetColor() == CON_WHITE {
 				node.SetFeature("parent", pgNode)
 				gm.dfs_Visit(node)
+			} else {
+				// 当父节点存在还未完全访问结束时，如果通过直接点又访问到了父节点，则说明存在环
+				if node.GetColor() == CON_GRAY {
+					gm.isCirculation = true
+				}
 			}
 		}
 	}
@@ -278,4 +283,44 @@ func (gm *GraphManager) dfs_Visit(pgNode *GraphNode) error {
 	pgNode.SetFeature("finish", gm.logicTime)
 
 	return nil
+}
+
+// 判断当前图是否存在循环，循环设置在深度遍历或广度遍历时设置
+func (gm GraphManager) ExistCircle() bool {
+	return gm.isCirculation
+}
+
+// 拓扑排序：根据深度遍历获取，返回节点
+// 算法：当未深度遍历图时，深度遍历此图，然后对每个节点的访问结束时间到排序即可
+func (gm *GraphManager) TopologySort() ([]*GraphNode, error) {
+	if gm == nil || len(gm.id2Node) == 0 {
+		return nil, errors.New("图中没有节点！")
+	}
+
+	if gm.isDirection == false {
+		return nil, errors.New("无向图不可以进行拓扑排序")
+	}
+
+	pNode := gm.getNodeById(0)
+
+	// 如果没有访问结束时间标识，表明未尽兴过深度遍历，对图进行深度遍历
+	if _, err := pNode.GetFeature("finish"); err != nil {
+		gm.DFS()
+	}
+
+	if gm.isCirculation == true {
+		return nil, errors.New("图中存在环，不可能进行拓扑排序")
+	}
+
+	// 根据节点访问结束时间进行排序
+	//retNodes := new(GraphNodes4SortByFinish)
+	retNodes := make([]*GraphNode, 0)
+
+	for _, value := range gm.id2Node {
+		retNodes = append(retNodes, value)
+	}
+
+	sort.Sort(GraphNodes4SortByFinish(retNodes))
+
+	return retNodes, nil
 }
